@@ -2,7 +2,7 @@
 //  HomeViewController.swift
 //  Project Noah
 //
-//  Created by EFABRO on 4/17/26.
+//  Created by EFABRO on 4/19/26.
 //
 import UIKit
 import MapKit
@@ -29,27 +29,31 @@ class HomeViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         let overlays: [UIView] = [searchBar, tabBar, isDayOrNight, locationView, tempView, sunriseView, sunsetView]
         overlays.forEach { view.bringSubviewToFront($0) }
         mapView.frame = view.bounds
+        mapView.overrideUserInterfaceStyle = .dark
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
         mapView.showsUserLocation = true
         searchBar.delegate = self
-        searchBar.searchTextField.textColor = .black
+        searchBar.searchTextField.textColor = .white
         tabBar.delegate = self
-        let glassViews = [locationView, tempView, sunriseView, sunsetView]
         
+        setupGlassUI()
+        setupViewModelObservers()
+    }
+    
+    private func setupGlassUI() {
+        let glassViews = [locationView, tempView, sunriseView, sunsetView]
         glassViews.forEach { glass in
             glass?.alpha = 0.7
             glass?.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.15)
-            
             glass?.layer.cornerRadius = 20
-            
             glass?.clipsToBounds = false
             glass?.layer.masksToBounds = false
-            
             glass?.layer.shadowColor = UIColor.black.cgColor
             glass?.layer.shadowOpacity = 0.2
             glass?.layer.shadowOffset = CGSize(width: 0, height: 8)
@@ -63,7 +67,9 @@ class HomeViewController: UIViewController {
             glass?.layer.borderWidth = 1.0
             glass?.layer.borderColor = UIColor.white.withAlphaComponent(0.4).cgColor
         }
-        
+    }
+    
+    private func setupViewModelObservers() {
         viewModel.onWeatherUpdate = { [weak self] in
             DispatchQueue.main.async {
                 guard let self = self, let data = self.viewModel.weatherData else { return }
@@ -73,7 +79,6 @@ class HomeViewController: UIViewController {
                 
                 if let weatherCondition = data.weather.first {
                     let weatherID = weatherCondition.id
-                    print("DEBUG: City: \(data.name) | Weather ID: \(weatherID) | Desc: \(weatherCondition.description)")
                     let isRaining = (200...599).contains(weatherID)
                     
                     if isRaining {
@@ -93,14 +98,10 @@ class HomeViewController: UIViewController {
                 
                 self.isDayOrNight.image = UIImage(systemName: iconName)
                 self.isDayOrNight.tintColor = iconColor
-                
                 self.locationLabel.text = "\(data.name), \(data.sys.country)"
                 self.tempLabel.text = "\(Int(data.main.temp))°C"
-                
                 self.sunriseLabel.text = "Sunrise: \(self.viewModel.formatTime(from: Int(data.sys.sunrise), offsetInSeconds: data.timezone))"
                 self.sunsetLabel.text = "Sunset: \(self.viewModel.formatTime(from: Int(data.sys.sunset), offsetInSeconds: data.timezone))"
-                
-                print("UI Updated: Displaying \(iconName) for \(self.viewModel.isNight ? "Night" : "Day") mode.")
             }
         }
         
@@ -141,10 +142,8 @@ extension HomeViewController: UITabBarDelegate {
             locationManager.startUpdatingLocation()
             searchBar.resignFirstResponder()
         } else if index == 1 {
-            // Index 1: History Button
             print("History tab pressed: Navigating...")
             performSegue(withIdentifier: "goToHistory", sender: self)
         }
     }
 }
-
